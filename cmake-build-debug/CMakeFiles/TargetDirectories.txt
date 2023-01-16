@@ -1,0 +1,3 @@
+/Users/artemgolev/Documents/Aip_Lab/cmake-build-debug/CMakeFiles/Aip_Lab.dir
+/Users/artemgolev/Documents/Aip_Lab/cmake-build-debug/CMakeFiles/edit_cache.dir
+/Users/artemgolev/Documents/Aip_Lab/cmake-build-debug/CMakeFiles/rebuild_cache.dir
