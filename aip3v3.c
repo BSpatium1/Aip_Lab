@@ -41,6 +41,7 @@ void get_token() {
         ungetc(c, stdin);
         token_type = Number;
     } else token_type = Error;
+    if (token_type == Error) exit(-1);
     *s = '\0';
 }
 
@@ -95,14 +96,8 @@ SuperLong super_long(char* s) {
     return num;
 }
 
-void print_super_long(SuperLong num) {
-    if (num.sign == -1) printf("-");
-    for (int i = num.len - 1; i >= 0; --i)
-        printf("%d", num.digits[i]);
-    puts("");
-}
-
 int equal(SuperLong num1, SuperLong num2) {
+    if (num1.sign != num2.sign) return 0;
     if (num1.len != num2.len) return 0;
     for (int i = 0; i < num1.len; ++i)
         if (num1.digits[i] != num2.digits[i]) return 0;
@@ -111,7 +106,37 @@ int equal(SuperLong num1, SuperLong num2) {
 
 int _max(int num1, int num2) { return (num1 > num2)? num1 : num2; }
 
+int abs_greater(SuperLong num1, SuperLong num2) {
+    if (num1.len == num2.len) {
+        for (int i = num1.len - 1; i >= 0; --i)
+            if (num1.digits[i] != num2.digits[i])
+                return num1.digits[i] > num2.digits[i];
+        return 0;
+    }
+    return num1.len > num2.len;
+}
+
+SuperLong _diff(SuperLong term1, SuperLong term2) {
+    int max_len = _max(term1.len, term2.len);
+    term1.len = max_len;
+    for (int i = 0; i < max_len; ++i) {
+        term1.digits[i] -= term2.digits[i];
+        if (term1.digits[i] < 0) {
+            --term1.digits[i + 1];
+            term1.digits[i] += 10;
+        }
+    }
+    for (int i = term1.len - 1; i > 0; --i) {
+        if (term1.digits[i] != 0) break;
+        --term1.len;
+    }
+    return term1;
+}
+
 SuperLong sum(SuperLong term1, SuperLong term2) {
+    if (term1.sign != term2.sign)  // via difference
+        return abs_greater(term1, term2)?  // |term1| > |term2|
+            _diff(term1, term2) : _diff(term2, term1);
     int max_len = _max(term1.len, term2.len);
     term1.len = max_len;
     for (int i = 0; i < max_len; ++i) {
@@ -127,21 +152,13 @@ SuperLong sum(SuperLong term1, SuperLong term2) {
 
 SuperLong inc(SuperLong num) { return sum(num, ONE); }
 
-SuperLong diff(SuperLong term1, SuperLong term2) {
-    int max_len = _max(term1.len, term2.len);
-    term1.len = max_len;
-    for (int i = 0; i < max_len; ++i) {
-        term1.digits[i] -= term2.digits[i];
-        if (term1.digits[i] < 0) {
-            --term1.digits[i + 1];
-            term1.digits[i] += 10;
-        }
-    }
-    for (int i = term1.len - 1; i > 0; --i) {
-        if (term1.digits[i] != 0) break;
-        --term1.len;
-    }
-    return term1;
+SuperLong opposite(SuperLong num) {
+    num.sign *= -1;
+    return num;
+}
+
+SuperLong diff(SuperLong term1, SuperLong term2) {  // a - b == a + -b
+    return sum(term1, opposite(term2));
 }
 
 SuperLong dec(SuperLong num) { return diff(num, ONE); }
@@ -159,11 +176,18 @@ SuperLong prod(SuperLong factor1, SuperLong factor2) {  // 11 * 11
                 if (i + j == max_len - 1) result.len = max_len + 1;
             }
         }
+    result.sign = factor1.sign * factor2.sign;
     return result;
 }
 
-// x / 2 = x * 5 / 10
+int is_zero(SuperLong num) {
+    if (num.len != 1) return 0;
+    return num.digits[0] == 0;
+}
+
+// x / 2 == x * 5 / 10
 SuperLong half(SuperLong num) {
+    if (is_zero(num)) return ZERO;
     num = prod(num, super_long("5"));
     for (int i = 1; i < num.len; ++i) num.digits[i - 1] = num.digits[i];
     --num.len;
@@ -180,8 +204,6 @@ SuperLong prog_sum(SuperLong start, SuperLong finish) {
     return sum(result, finish);*/
     return half(prod(sum(start, finish), sum(diff(finish, start), ONE)));
 }
-
-int is_zero(SuperLong num) { return equal(num, ZERO); }
 
 SuperLong pow_(SuperLong base, SuperLong power) {
     if (is_zero(power)) return ONE;
@@ -200,6 +222,15 @@ SuperLong fact(SuperLong num) {
         result = prod(result, i);
     return result;
 }
+
+void print_super_long(SuperLong num) {
+    if (num.sign == -1 && !is_zero(num)) printf("-");
+    for (int i = num.len - 1; i >= 0; --i)
+        printf("%d", num.digits[i]);
+    puts("");
+}
+
+// ####################################################################################################################
 
 SuperLong arith(SuperLong num1, char operator, SuperLong num2) {
     switch (operator) {
@@ -246,7 +277,7 @@ SuperLong get_sign() {  // calculate signed factorial
         put_back();
         factorial = get_factorial();
     } else {
-        factorial = get_number();
+        factorial = get_factorial();
         factorial = arith(ZERO, operator, factorial);
     }
     return factorial;
@@ -314,6 +345,8 @@ SuperLong get_value() {  // calculate sum of progression
     if (!is_space()) {
         put_back();
     } else {
+        get_token();
+        if (token_type != Number)
         bound2 = get_bound();
         bound1 = arith(bound1, operator, bound2);
     }
@@ -322,5 +355,18 @@ SuperLong get_value() {  // calculate sum of progression
 
 int main(){
     print_super_long(get_value());
+    /*
+    SuperLong mOne = super_long("-1");
+    SuperLong two = super_long("2");
+    SuperLong mTwo = super_long("-2");
+    print_super_long(sum(mOne, mOne));  // -2
+    print_super_long(sum(mOne, two));  // 1 (-3)
+    print_super_long(sum(two, mOne));  // 1 (3)
+    print_super_long(sum(mTwo, ONE));  // -1 (-3)
+    print_super_long(sum(ONE, mTwo));  // -1 (3)
+    print_super_long(sum(mTwo, ONE));  // -1 (-3)
+    print_super_long(sum(ONE, mOne));  // 0
+    print_super_long(sum(mOne, ONE));  // 0
+    */
     return 0;
 }
