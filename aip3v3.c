@@ -22,12 +22,14 @@ TokenType token_type;
 
 int is_digit(char c) { return c >= '0' && c <= '9'; }
 
-long is_operator(char c) { return (long)strchr(" +-*^!", c); }
+//long is_operator(char c) { return (long)strchr(" +-*^!", c); }
+long is_operator(char c) { return (long)strchr("+-*^!", c); }
 
 void get_token() {
     if (token_type == End) return;
     char* s = token;
-    char c = getchar();
+    char c;
+    while ((c = getchar()) == ' ');
     if (c == '\n') {
         token_type = End;
     } else if (is_operator(c)) {
@@ -41,7 +43,7 @@ void get_token() {
         ungetc(c, stdin);
         token_type = Number;
     } else token_type = Error;
-    if (token_type == Error) exit(-1);
+    if (token_type == Error) exit(-1);  // реакция на лексическую ошибку
     *s = '\0';
 }
 
@@ -59,10 +61,10 @@ void print_token() {
     printf("token = \"%s\", type = %d\n", token, token_type);
 }
 
-int is_space() {
+/*int is_space() {
     if (token_type != Operator) return 0;
     return *token == ' ';
-}
+}*/
 
 int is_plus_minus() {
     if (token_type != Operator) return 0;
@@ -234,7 +236,7 @@ void print_super_long(SuperLong num) {
 
 SuperLong arith(SuperLong num1, char operator, SuperLong num2) {
     switch (operator) {
-        case ' ': return prog_sum(num1, num2);
+        //case ' ': return prog_sum(num1, num2);
         case '+': return sum(num1, num2);
         case '-': return diff(num1, num2);
         case '*': return prod(num1, num2);
@@ -317,7 +319,7 @@ SuperLong get_term() {  // calculate product
     return factor1;
 }
 
-SuperLong get_bound() {  // calculate sum
+SuperLong get_value() {//bound() {  // calculate sum
     SuperLong term1, term2;
     char operator;
 
@@ -335,38 +337,23 @@ SuperLong get_bound() {  // calculate sum
     return term1;
 }
 
-SuperLong get_value() {  // calculate sum of progression
-    SuperLong bound1, bound2;
-    char operator;
 
-    bound1 = get_bound();
-    get_token();
-    operator = *token;
-    if (!is_space()) {
-        put_back();
-    } else {
-        get_token();
-        if (token_type != Number)
-        bound2 = get_bound();
-        bound1 = arith(bound1, operator, bound2);
-    }
-    return bound1;
-}
 
 int main(){
-    print_super_long(get_value());
-    /*
-    SuperLong mOne = super_long("-1");
-    SuperLong two = super_long("2");
-    SuperLong mTwo = super_long("-2");
-    print_super_long(sum(mOne, mOne));  // -2
-    print_super_long(sum(mOne, two));  // 1 (-3)
-    print_super_long(sum(two, mOne));  // 1 (3)
-    print_super_long(sum(mTwo, ONE));  // -1 (-3)
-    print_super_long(sum(ONE, mTwo));  // -1 (3)
-    print_super_long(sum(mTwo, ONE));  // -1 (-3)
-    print_super_long(sum(ONE, mOne));  // 0
-    print_super_long(sum(mOne, ONE));  // 0
-    */
+    SuperLong result;
+    Token first;
+    scanf("%s", first);  // вместо get_token, чтобы захватить минус, так как может быть отрицательным
+    get_token();  // либо оператор -- тогда по алгоритму, -- либо второе число -- тогда прогрессия
+    if (token_type == Operator) {
+        // вычислить выражение
+        put_back();  // вернули оператор
+        strcpy(token, first);
+        put_back();  // вернули первое число
+        result = get_value();
+    } else if (token_type == Number) {  // увы, только для положительных
+        // посчитать прогрессию
+        result = prog_sum(super_long(first), super_long(token));
+    } else return -1;
+    print_super_long(result);
     return 0;
 }
